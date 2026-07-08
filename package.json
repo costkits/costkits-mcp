@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "MCP server for the CostKits healthcare cost API — give Claude, ChatGPT, or any MCP client live procedure cost estimates, provider pricing, coverage rules, and bill analysis.",
   "license": "MIT",
+  "author": {
+    "name": "John Caruso",
+    "email": "hello@costkits.com",
+    "url": "https://costkits.com/about/"
+  },
   "type": "module",
   "publishConfig": {
     "access": "public"

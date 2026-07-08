@@ -72,7 +72,11 @@ npm run smoke     # spawns the server and calls demo_estimate over real MCP stdi
 
 ## Links
 
-[CostKits API docs & examples](https://github.com/costkits/costkits-api) · [costkits.com](https://costkits.com) · [Get an API key](https://costkits.com/api-keys)
+[CostKits API docs & examples](https://github.com/costkits/costkits-api) · [costkits.com](https://costkits.com) · [Interactive demo](https://costkits.com/api/demo/) · [Get an API key](https://costkits.com/api-keys)
+
+## About CostKits
+
+CostKits is a healthcare cost-transparency platform built and maintained by [John Caruso, FSA, MAAA](https://costkits.com/about/) — a healthcare actuary with 20+ years in insurance pricing, medical billing systems, and healthcare cost analytics. This MCP server wraps the same pricing engine behind [costkits.com](https://costkits.com)'s consumer tools. See our [data & pricing methodology](https://costkits.com/methodology/) for how estimates are sourced.
 
 ## License
 
