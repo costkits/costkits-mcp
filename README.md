@@ -13,7 +13,7 @@ Add to your `claude_desktop_config.json` (Settings → Developer → Edit Config
   "mcpServers": {
     "costkits": {
       "command": "npx",
-      "args": ["-y", "costkits-mcp"],
+      "args": ["-y", "@costkits/costkits-mcp"],
       "env": {
         "COSTKITS_API_KEY": "ck_your_key_here"
       }

@@ -1,9 +1,12 @@
 {
-  "name": "costkits-mcp",
+  "name": "@costkits/costkits-mcp",
   "version": "1.0.0",
   "description": "MCP server for the CostKits healthcare cost API — give Claude, ChatGPT, or any MCP client live procedure cost estimates, provider pricing, coverage rules, and bill analysis.",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "costkits-mcp": "src/server.js"
   },
