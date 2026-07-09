@@ -4,9 +4,14 @@
 // https://github.com/costkits/costkits-api. No state, no caching, no secrets
 // beyond the COSTKITS_API_KEY environment variable.
 
+import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+
+const PKG_VERSION = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8")
+).version;
 
 const API_BASE = process.env.COSTKITS_API_BASE || "https://api.costkits.com";
 const API_KEY = process.env.COSTKITS_API_KEY || null;
@@ -22,7 +27,7 @@ async function callApi(method, path, { query, body, auth = true } = {}) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   }
 
-  const headers = {};
+  const headers = { "User-Agent": `costkits-mcp/${PKG_VERSION}` };
   if (auth) {
     if (!API_KEY) {
       return {
