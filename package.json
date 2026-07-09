@@ -6,7 +6,7 @@
   "author": {
     "name": "John Caruso",
     "email": "hello@costkits.com",
-    "url": "https://costkits.com/about/"
+    "url": "https://www.costkits.com/about/"
   },
   "type": "module",
   "publishConfig": {
@@ -40,7 +40,7 @@
     "type": "git",
     "url": "git+https://github.com/costkits/costkits-mcp.git"
   },
-  "homepage": "https://costkits.com/api/",
+  "homepage": "https://www.costkits.com/api/",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "zod": "^3.24.0"

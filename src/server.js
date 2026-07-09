@@ -34,7 +34,7 @@ async function callApi(method, path, { query, body, auth = true } = {}) {
         isError: true,
         content: [{
           type: "text",
-          text: "COSTKITS_API_KEY is not set. This tool needs an API key — get a free one at https://costkits.com/api-keys and set it in the MCP server's env config. (The demo_estimate tool works without a key.)",
+          text: "COSTKITS_API_KEY is not set. This tool needs an API key — get a free one at https://www.costkits.com/api-keys/ and set it in the MCP server's env config. (The demo_estimate tool works without a key.)",
         }],
       };
     }
