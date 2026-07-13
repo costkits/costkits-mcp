@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.costkits/costkits-mcp",
+  "description": "MCP server for CostKits: live healthcare procedure cost estimates and provider pricing.",
+  "repository": {
+    "url": "https://github.com/costkits/costkits-mcp",
+    "source": "github"
+  },
+  "version": "1.0.6",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@costkits/costkits-mcp",
+      "version": "1.0.6",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Your CostKits API key (ck_...). Required for all tools except demo_estimate.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "COSTKITS_API_KEY"
+        },
+        {
+          "description": "Override the CostKits API base URL (for testing).",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "COSTKITS_API_BASE"
+        }
+      ]
+    }
+  ]
+}
