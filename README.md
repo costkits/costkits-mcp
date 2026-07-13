@@ -70,25 +70,6 @@ npm install
 npm run smoke     # spawns the server and calls demo_estimate over real MCP stdio
 ```
 
-## Publishing / releasing a new version
-
-This package is listed on both npm and the [official MCP Registry](https://registry.modelcontextprotocol.io) (`io.github.costkits/costkits-mcp`). They are separate systems — publishing to npm does **not** automatically update the MCP Registry entry.
-
-To ship a new version:
-
-1. Bump `version` in **both** `package.json` and `server.json` (must match exactly), and keep `mcpName` in `package.json` in sync with `name` in `server.json`.
-2. `npm publish --access public` (requires npm browser OTP approval — must be run interactively, not from CI without a token).
-3. Publish the new version to the MCP Registry:
-   ```bash
-   gh workflow run publish-mcp.yml --repo costkits/costkits-mcp
-   ```
-   or push a `vX.Y.Z` tag, which triggers the same workflow (`.github/workflows/publish-mcp.yml`).
-
-Notes:
-- The workflow authenticates via **GitHub Actions OIDC** (`mcp-publisher login github-oidc`), not personal GitHub login. Do not use `mcp-publisher login github` + `mcp-publisher publish` from a local machine for this org-owned repo — it hits a [known registry bug](https://github.com/modelcontextprotocol/registry/issues/398) requiring your GitHub org membership to be public, which we don't want to keep on.
-- MCP Registry versions are **immutable** once published — there's no delete/edit, only publishing a new version string.
-- Registry entries other than the official one (e.g. Smithery, mcp.so, Cursor's directory, Glama) are independent third-party services — some poll the official registry, some require separate manual/API submission. Publishing here does not guarantee they pick it up; check each one if visibility there matters.
-
 ## Links
 
 [CostKits API docs & examples](https://github.com/costkits/costkits-api) · [costkits.com](https://www.costkits.com) · [Interactive demo](https://www.costkits.com/api/demo/) · [Get an API key](https://www.costkits.com/api-keys/)
