@@ -6,7 +6,8 @@
     "url": "https://github.com/costkits/costkits-mcp",
     "source": "github"
   },
-  "version": "1.0.7",
+  "websiteUrl": "https://www.costkits.com/api/",
+  "version": "1.0.8",
   "packages": [
     {
       "registryType": "npm",
