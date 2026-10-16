@@ -13,6 +13,7 @@ import { createServer as createHttpServer } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createServer } from "./tools.js";
 import { logToolCall, makeRateLimiter } from "./hosting.js";
+import { PROFILES } from "./profiles.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const API_BASE = process.env.COSTKITS_API_BASE || "https://api.costkits.com";
@@ -51,7 +52,20 @@ const httpServer = createHttpServer(async (req, res) => {
 
   if (pathname === "/healthz") return send(res, 200, { ok: true });
 
-  if (pathname !== "/mcp") return send(res, 404, { error: "not found" });
+  if (pathname === "/.well-known/openai-apps-challenge" && process.env.OPENAI_APPS_CHALLENGE) {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    return res.end(process.env.OPENAI_APPS_CHALLENGE);
+  }
+
+  // /mcp = funnel profile; /p/<profile>/mcp = one profile per directory plugin (see profiles.js).
+  let profile = "funnel";
+  const m = pathname.match(/^\/p\/([a-z0-9-]+)\/mcp$/);
+  if (m) {
+    if (m[1] === "funnel" || !PROFILES[m[1]]) return send(res, 404, { error: "not found" });
+    profile = m[1];
+  } else if (pathname !== "/mcp") {
+    return send(res, 404, { error: "not found" });
+  }
 
   // Stateless mode has no server->client stream or sessions to delete.
   if (req.method !== "POST") {
@@ -63,7 +77,7 @@ const httpServer = createHttpServer(async (req, res) => {
 
   try {
     const body = await readBody(req);
-    const server = createServer({ apiBase: API_BASE, apiKey: API_KEY, hosted: true, onToolCall: logToolCall });
+    const server = createServer({ apiBase: API_BASE, apiKey: API_KEY, hosted: true, profile, onToolCall: logToolCall });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     res.on("close", () => { transport.close(); server.close(); });
     await server.connect(transport);

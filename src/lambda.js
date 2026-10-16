@@ -10,6 +10,7 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createServer } from "./tools.js";
 import { logToolCall, makeRateLimiter } from "./hosting.js";
+import { PROFILES } from "./profiles.js";
 
 const API_BASE = process.env.COSTKITS_API_BASE || "https://api.costkits.com";
 const MAX_BODY_BYTES = 256 * 1024;
@@ -40,7 +41,21 @@ export async function handler(event) {
   const path = event.rawPath || "/";
 
   if (path === "/healthz") return json(200, { ok: true });
-  if (path !== "/mcp") return json(404, { error: "not found" });
+
+  // OpenAI domain-verification challenge (plain text token from the plugin portal).
+  if (path === "/.well-known/openai-apps-challenge" && process.env.OPENAI_APPS_CHALLENGE) {
+    return { statusCode: 200, headers: { "content-type": "text/plain" }, body: process.env.OPENAI_APPS_CHALLENGE };
+  }
+
+  // /mcp = funnel profile; /p/<profile>/mcp = one profile per directory plugin (see profiles.js).
+  let profile = "funnel";
+  const m = path.match(/^\/p\/([a-z0-9-]+)\/mcp$/);
+  if (m) {
+    if (m[1] === "funnel" || !PROFILES[m[1]]) return json(404, { error: "not found" });
+    profile = m[1];
+  } else if (path !== "/mcp") {
+    return json(404, { error: "not found" });
+  }
   if (method !== "POST") {
     return json(405, { jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed" }, id: null }, { allow: "POST" });
   }
@@ -57,7 +72,7 @@ export async function handler(event) {
       headers: event.headers || {},
       body,
     });
-    const server = createServer({ apiBase: API_BASE, apiKey: await getApiKey(), hosted: true, onToolCall: logToolCall });
+    const server = createServer({ apiBase: API_BASE, apiKey: await getApiKey(), hosted: true, profile, onToolCall: logToolCall });
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     await server.connect(transport);
     const res = await transport.handleRequest(request);

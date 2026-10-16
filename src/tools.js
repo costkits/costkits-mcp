@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { nextStepFor } from "./next-step.js";
+import { PROFILES } from "./profiles.js";
+import { screenFinancialAssistance } from "./assistance.js";
 
 const PKG_VERSION = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8")
@@ -13,32 +15,44 @@ const PKG_VERSION = JSON.parse(
 // Tools withheld from the hosted ChatGPT app. analyze_bill takes line items
 // from a patient's bill (PHI-adjacent) and is Pro-plan; v1 of the hosted app
 // serves public pricing data only. Bill analysis happens in the CostKits app.
-const HOSTED_MAX_PROVIDERS = 10; // per call; hosted find_providers is capped
+const HOSTED_MAX_PROVIDERS = 5;  // per call; hosted find_providers is capped
 const HOSTED_EXCLUDED_TOOLS = new Set(["analyze_bill"]);
 
 /**
  * @param {object} opts
  * @param {string} [opts.apiBase]
  * @param {string|null} [opts.apiKey]
+ * @param {string} [opts.profile]  hosted tool profile (see profiles.js); default 'funnel' = all tools
  * @param {boolean} [opts.hosted]   hosted mode: drop PHI-adjacent tools, append
  *                                  a tagged CostKits next-step link to results
  * @param {(evt: object) => void} [opts.onToolCall]  PII-free usage callback
  */
-export function createServer({ apiBase = "https://api.costkits.com", apiKey = null, hosted = false, onToolCall } = {}) {
+export function createServer({ apiBase = "https://api.costkits.com", apiKey = null, hosted = false, profile = "funnel", onToolCall } = {}) {
   const API_BASE = apiBase;
   const API_KEY = apiKey;
   const server = new McpServer({ name: "costkits", version: PKG_VERSION });
 
-  // Registers a tool; in hosted mode filters excluded tools and decorates results.
+  const prof = PROFILES[profile] ?? PROFILES.funnel;
+  // Pure computations that read nothing outside their inputs.
+  const CLOSED_WORLD = new Set(["calculate_liability", "check_financial_assistance"]);
+
+  // Registers a tool; in hosted mode applies the profile's tool list, adds the required behavior
+  // annotations (all tools here are read-only), and decorates results with a next-step link.
   function reg(name, config, handler) {
     if (hosted && HOSTED_EXCLUDED_TOOLS.has(name)) return;
+    if (hosted && prof.tools && !prof.tools.includes(name)) return;
+    config.annotations ??= {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: !CLOSED_WORLD.has(name),
+    };
     if (!hosted) return server.registerTool(name, config, handler);
     return server.registerTool(name, config, async (args, extra) => {
       const started = Date.now();
       const result = await handler(args, extra);
-      onToolCall?.({ tool: name, args, ok: !result.isError, ms: Date.now() - started });
+      onToolCall?.({ tool: name, args, ok: !result.isError, ms: Date.now() - started, profile });
       if (!result.isError) {
-        const step = nextStepFor(name, args);
+        const step = nextStepFor(name, args, { mode: prof.mode, profile });
         if (step) result.content.push({ type: "text", text: step });
       }
       return result;
@@ -314,6 +328,22 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
     ({ line_items }) => callApi("POST", "/v1/bill-analysis", { body: { line_items } })
   );
 
+
+  reg(
+    "check_financial_assistance",
+    {
+      description:
+        "Screen a household for hospital financial assistance (charity care): returns income as a percent of the federal poverty guidelines, the typical range hospital policies cover, what federal rules (IRS 501(r)) do and do not guarantee, and next steps. Use when a user asks whether they might qualify for help paying a hospital bill. It is a screening estimate, not an eligibility decision: each hospital sets its own limits. Needs household size and annual household income; do not ask for names, account numbers or bill details.",
+      inputSchema: {
+        household_size: z.number().int().min(1).max(20).describe("Number of people in the household, including the patient"),
+        annual_household_income: z.number().min(0).max(10000000).describe("Total annual household income before taxes, in dollars"),
+        state: z.string().length(2).optional().describe("2-letter US state code; only Alaska and Hawaii change the poverty guideline"),
+      },
+    },
+    ({ household_size, annual_household_income, state }) => ({
+      content: [{ type: "text", text: JSON.stringify(screenFinancialAssistance({ household_size, annual_household_income, state })) }],
+    })
+  );
 
   return server;
 }

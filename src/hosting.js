@@ -3,12 +3,13 @@
 
 // Usage log: one JSON line per tool call. No free text, no insurance numbers.
 // procedure is logged only when it is slug-shaped; state only when 2 letters.
-export function logToolCall({ tool, args = {}, ok, ms }) {
+export function logToolCall({ tool, args = {}, ok, ms, profile }) {
   const raw = args.procedure ?? args.slug;
   const proc = typeof raw === "string" ? raw.toLowerCase() : null;
   console.log(JSON.stringify({
     ts: new Date().toISOString(),
     evt: "tool_call",
+    profile: profile || "funnel",
     tool,
     ok,
     ms,
