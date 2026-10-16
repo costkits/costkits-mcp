@@ -9,7 +9,7 @@
 
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createServer } from "./tools.js";
-import { logToolCall, makeRateLimiter } from "./hosting.js";
+import { logToolCall, logRequest, makeRateLimiter } from "./hosting.js";
 import { PROFILES } from "./profiles.js";
 
 const API_BASE = process.env.COSTKITS_API_BASE || "https://api.costkits.com";
@@ -36,7 +36,27 @@ const json = (statusCode, body, headers = {}) => ({
   body: JSON.stringify(body),
 });
 
+// Wraps routing so every request (except health checks) gets one structural log line.
 export async function handler(event) {
+  const started = Date.now();
+  const res = await route(event);
+  const path = event.rawPath || "/";
+  if (path !== "/healthz") {
+    const pm = path.match(/^\/p\/([a-z0-9-]+)\/mcp$/);
+    const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64").toString() : event.body) : "";
+    try {
+      logRequest({
+        method: event.requestContext?.http?.method || "GET",
+        path, profile: pm ? pm[1] : path === "/mcp" ? "funnel" : null,
+        status: res.statusCode, ms: Date.now() - started, headers: event.headers || {},
+        requestBody: raw.length <= MAX_BODY_BYTES ? raw : "", responseBody: res.body || "",
+      });
+    } catch { /* logging must never break a request */ }
+  }
+  return res;
+}
+
+async function route(event) {
   const method = event.requestContext?.http?.method || "GET";
   const path = event.rawPath || "/";
 
