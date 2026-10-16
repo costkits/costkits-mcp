@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "costkits-mcp",
   "display_name": "CostKits",
-  "version": "1.0.7",
-  "description": "Live US healthcare procedure cost estimates, provider pricing, coverage rules, and bill analysis.",
-  "long_description": "Give Claude, ChatGPT, or any MCP client live US healthcare cost data — procedure cost estimates, provider pricing, insurance coverage rules, and medical bill analysis, grounded in real hospital transparency and CMS data instead of model priors. Backed by the CostKits API (https://www.costkits.com). The demo_estimate tool works with no API key so you can verify the wiring before getting a key.",
+  "version": "2.0.0",
+  "description": "Live US healthcare procedure cost estimates, provider pricing, and coverage rules. No API key.",
+  "long_description": "Give Claude, ChatGPT, or any MCP client live US healthcare cost data: procedure cost estimates, provider pricing, and insurance coverage rules, grounded in real hospital transparency and CMS data instead of model priors. Free hosted server from CostKits (https://www.costkits.com), no API key needed.",
   "author": {
     "name": "John Caruso",
     "email": "hello@costkits.com",
@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/costkits/costkits-mcp.git"
   },
-  "homepage": "https://www.costkits.com/api/",
+  "homepage": "https://www.costkits.com/",
   "documentation": "https://github.com/costkits/costkits-mcp#readme",
   "support": "https://github.com/costkits/costkits-mcp/issues",
   "server": {
@@ -22,19 +22,9 @@
     "entry_point": "src/server.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/src/server.js"],
-      "env": {
-        "COSTKITS_API_KEY": "${user_config.costkits_api_key}"
-      }
-    }
-  },
-  "user_config": {
-    "costkits_api_key": {
-      "type": "string",
-      "title": "CostKits API Key",
-      "description": "Your CostKits API key (ck_...). Required for all tools except demo_estimate. Get one free at https://www.costkits.com/api-keys/",
-      "sensitive": true,
-      "required": false
+      "args": [
+        "${__dirname}/src/server.js"
+      ]
     }
   },
   "keywords": [

@@ -2,10 +2,7 @@
   "mcpServers": {
     "costkits": {
       "command": "npx",
-      "args": ["-y", "@costkits/costkits-mcp"],
-      "env": {
-        "COSTKITS_API_KEY": "ck_your_key_here"
-      }
+      "args": ["-y", "@costkits/costkits-mcp"]
     }
   }
 }

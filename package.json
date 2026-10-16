@@ -1,8 +1,8 @@
 {
   "name": "@costkits/costkits-mcp",
-  "version": "1.0.7",
+  "version": "2.0.0",
   "mcpName": "io.github.costkits/costkits-mcp",
-  "description": "MCP server for the CostKits healthcare cost API — give Claude, ChatGPT, or any MCP client live procedure cost estimates, provider pricing, coverage rules, and bill analysis.",
+  "description": "Free hosted MCP server for CostKits: live US healthcare procedure cost estimates, provider pricing, and coverage rules for Claude, ChatGPT, or any MCP client. No API key.",
   "license": "MIT",
   "author": {
     "name": "John Caruso",
@@ -24,7 +24,10 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "smoke": "node scripts/smoke-test.js"
+    "start:http": "node src/http.js",
+    "smoke": "node scripts/smoke-test.js",
+    "smoke:http": "node scripts/smoke-test-http.js",
+    "smoke:lambda": "node scripts/smoke-test-lambda.js"
   },
   "keywords": [
     "mcp",
