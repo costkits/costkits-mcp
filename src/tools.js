@@ -33,8 +33,8 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
   const server = new McpServer({ name: "costkits", version: PKG_VERSION });
 
   const prof = PROFILES[profile] ?? PROFILES.funnel;
-  // Pure computations that read nothing outside their inputs.
-  const CLOSED_WORLD = new Set(["calculate_liability", "check_financial_assistance"]);
+  // Every tool reads only CostKits' own datasets (or does pure math on its inputs); none reaches the open
+  // internet or changes anything, so all are closed-world, read-only.
 
   // Registers a tool; in hosted mode applies the profile's tool list, adds the required behavior
   // annotations (all tools here are read-only), and decorates results with a next-step link.
@@ -44,7 +44,7 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
     config.annotations ??= {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: !CLOSED_WORLD.has(name),
+      openWorldHint: false,
     };
     if (!hosted) return server.registerTool(name, config, handler);
     return server.registerTool(name, config, async (args, extra) => {
@@ -141,11 +141,11 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
     "estimate_procedure_cost",
     {
       description:
-        "Estimate what a medical procedure costs in a US state: allowed-amount range (low/median/high), billing components, risk flags, and — if insurance details are given — the patient's expected out-of-pocket. Use resolve_procedure first if the user gave a free-text procedure name. Always present ranges, not single numbers, and cite the returned data_vintage.",
+        "Returns the typical allowed-amount range (low, median, high) for one medical procedure in one US state, the usual billing components (facility, physician, anesthesia, pathology), and the data vintage. If the user chooses to give their own deductible, coinsurance and out-of-pocket figures, it also returns an estimated patient share. These are estimates of typical prices from hospital price transparency and Medicare data, not quotes. Only the procedure and state are required; ZIP code and plan figures are optional and are used only for this one calculation.",
       inputSchema: {
-        procedure: z.string().describe("Procedure slug or plain name, e.g. 'colonoscopy' or 'mri-knee'"),
-        state: z.string().describe("2-letter US state code, e.g. 'CT'"),
-        zip_code: z.string().optional().describe("Optional 5-digit ZIP for locality"),
+        procedure: z.string().describe("Procedure slug or plain name, e.g. 'colonoscopy' or 'mri-knee'. A plain name that is not an exact slug can be matched with resolve_procedure."),
+        state: z.string().describe("2-letter US state code, e.g. 'CT'. Prices are state-level."),
+        zip_code: z.string().optional().describe("Optional 5-digit ZIP, used only to refine the local estimate"),
         ...insuranceShape,
       },
     },
@@ -214,13 +214,16 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
   reg(
     "find_providers",
     {
-      description:
-        "Find healthcare providers for a procedure in a US state. Each provider has pricing_status: 'observed' (real negotiated rate from hospital transparency data — prefer these), 'estimated', or 'none'. Set cluster=true for city-level groups with lat/lng.",
+      description: hosted
+        ? "Lists up to 5 facilities in one US state that perform a procedure, with name, address and a pricing_status field: 'observed' means a negotiated rate is published in that facility's price transparency data, 'estimated' means only a state-level benchmark applies, 'none' means no price data. Dollar amounts are not returned. The list is partial and is not a ranking or a recommendation."
+        : "Find healthcare providers for a procedure in a US state. Each provider has pricing_status: 'observed' (a negotiated rate is published in the facility's hospital transparency data), 'estimated' (state-level benchmark), or 'none'. Set cluster=true for city-level groups with lat/lng.",
       inputSchema: {
-        procedure: z.string().describe("Procedure slug or plain name"),
-        state: z.string().describe("2-letter US state code"),
-        limit: z.number().int().min(1).max(100).optional().describe("Max results (default 25)"),
-        cluster: z.boolean().optional().describe("Group by city with lat/lng (default false)"),
+        procedure: z.string().describe("Procedure slug or plain name, e.g. 'colonoscopy'"),
+        state: z.string().describe("2-letter US state code, e.g. 'CT'"),
+        limit: hosted
+          ? z.number().int().min(1).max(HOSTED_MAX_PROVIDERS).optional().describe(`Max results, 1 to ${HOSTED_MAX_PROVIDERS} (default ${HOSTED_MAX_PROVIDERS})`)
+          : z.number().int().min(1).max(100).optional().describe("Max results (default 25)"),
+        ...(hosted ? {} : { cluster: z.boolean().optional().describe("Group by city with lat/lng (default false)") }),
       },
     },
     ({ procedure, state, limit, cluster }) =>
@@ -243,7 +246,7 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
     "resolve_procedure",
     {
       description:
-        "Fuzzy-match a free-text procedure name ('knee mri', 'gallbladder removal') to a canonical slug with confidence scores. Call this BEFORE estimate tools whenever the user's wording might not be an exact slug.",
+        "Maps a free-text procedure name ('knee mri', 'gallbladder removal') to a CostKits catalog slug with a confidence score. Returns best_match and alternatives; best_match is null when the procedure is not in the catalog.",
       inputSchema: { query: z.string().describe("Free-text procedure name") },
     },
     ({ query }) => callApi("GET", "/v1/procedures/resolve", { query: { q: query } })
