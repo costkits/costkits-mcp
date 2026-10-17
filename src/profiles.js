@@ -15,6 +15,8 @@ export const PROFILES = {
 
   "cost-finder": {
     mode: "info",
+    // data minimization: price-only estimate; no ZIP or insurance figures (the oop-calculator plugin handles plan math)
+    basicEstimate: true,
     tools: ["resolve_procedure", "get_procedure_details", "estimate_procedure_cost", "find_providers", "get_provider"],
   },
   "oop-calculator": {

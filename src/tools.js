@@ -137,16 +137,21 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
     () => callApi("GET", "/v1/demo/estimate", { auth: false })
   );
 
+  // cost-finder (basicEstimate) takes only procedure + state: no ZIP, no plan figures.
+  const basic = hosted && prof.basicEstimate === true;
   reg(
     "estimate_procedure_cost",
     {
-      description:
-        "Returns the typical allowed-amount range (low, median, high) for one medical procedure in one US state, the usual billing components (facility, physician, anesthesia, pathology), and the data vintage. If the user chooses to give their own deductible, coinsurance and out-of-pocket figures, it also returns an estimated patient share. These are estimates of typical prices from hospital price transparency and Medicare data, not quotes. Only the procedure and state are required; ZIP code and plan figures are optional and are used only for this one calculation.",
+      description: basic
+        ? "Returns the typical allowed-amount range (low, median, high) for one medical procedure in one US state, the usual billing components (facility, physician, anesthesia, pathology), and the data vintage. These are estimates of typical prices from hospital price transparency and Medicare data, not quotes. Requires only a procedure and a state."
+        : "Returns the typical allowed-amount range (low, median, high) for one medical procedure in one US state, the usual billing components (facility, physician, anesthesia, pathology), and the data vintage. If the user chooses to give their own deductible, coinsurance and out-of-pocket figures, it also returns an estimated patient share. These are estimates of typical prices from hospital price transparency and Medicare data, not quotes. Only the procedure and state are required; ZIP code and plan figures are optional and are used only for this one calculation.",
       inputSchema: {
         procedure: z.string().describe("Procedure slug or plain name, e.g. 'colonoscopy' or 'mri-knee'. A plain name that is not an exact slug can be matched with resolve_procedure."),
         state: z.string().describe("2-letter US state code, e.g. 'CT'. Prices are state-level."),
-        zip_code: z.string().optional().describe("Optional 5-digit ZIP, used only to refine the local estimate"),
-        ...insuranceShape,
+        ...(basic ? {} : {
+          zip_code: z.string().optional().describe("Optional 5-digit ZIP, used only to refine the local estimate"),
+          ...insuranceShape,
+        }),
       },
     },
     ({ procedure, state, zip_code, plan_type, deductible_remaining, coinsurance_pct, oop_remaining }) => {
