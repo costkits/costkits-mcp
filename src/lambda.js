@@ -63,8 +63,15 @@ async function route(event) {
   if (path === "/healthz") return json(200, { ok: true });
 
   // OpenAI domain-verification challenge (plain text token from the plugin portal).
-  if (path === "/.well-known/openai-apps-challenge" && process.env.OPENAI_APPS_CHALLENGE) {
-    return { statusCode: 200, headers: { "content-type": "text/plain" }, body: process.env.OPENAI_APPS_CHALLENGE };
+  // Each plugin gets its own hostname and its own token. CloudFront does not forward Host to a Lambda URL, so a
+  // viewer-request function copies it into x-viewer-host. OPENAI_APPS_CHALLENGES = JSON {"host": "token"};
+  // OPENAI_APPS_CHALLENGE (single token) remains the answer for mcp.costkits.com / when no host header is present.
+  if (path === "/.well-known/openai-apps-challenge") {
+    const host = String(event.headers?.["x-viewer-host"] || "").toLowerCase().replace(/:\d+$/, "");
+    let map = {};
+    try { map = JSON.parse(process.env.OPENAI_APPS_CHALLENGES || "{}"); } catch { /* ignore bad config */ }
+    const token = map[host] ?? (!host || host === "mcp.costkits.com" ? process.env.OPENAI_APPS_CHALLENGE : undefined);
+    if (token) return { statusCode: 200, headers: { "content-type": "text/plain" }, body: token };
   }
 
   // /mcp = funnel profile; /p/<profile>/mcp = one profile per directory plugin (see profiles.js).
