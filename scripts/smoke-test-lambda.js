@@ -45,6 +45,9 @@ const assist = await listAt("/p/assistance-checker/mcp");
 if (assist.names.join() !== "check_financial_assistance") throw new Error(`assistance profile tools wrong: ${assist.names}`);
 const cost = await listAt("/p/cost-finder/mcp");
 if (cost.names.includes("calculate_liability") || !cost.names.includes("find_providers")) throw new Error(`cost-finder tools wrong: ${cost.names}`);
+if (cost.names.includes("compare_bill_amount")) throw new Error("compare_bill_amount belongs to oop-calculator only");
+const oop = await listAt("/p/oop-calculator/mcp");
+if (oop.names.sort().join() !== "calculate_liability,compare_bill_amount,estimate_procedure_cost,resolve_procedure") throw new Error(`oop profile tools wrong: ${oop.names}`);
 if ((await listAt("/p/nope/mcp")).status !== 404) throw new Error("unknown profile must 404");
 if ((await listAt("/p/funnel/mcp")).status !== 404) throw new Error("/p/funnel is not a valid plugin path");
 
@@ -57,6 +60,21 @@ if (!a.content[1].text.includes("/agents/info/assistance/") || !a.content[1].tex
 if (a.content[1].text.includes("52000")) throw new Error("income must never appear in the link");
 const f = await call("/mcp", "check_financial_assistance", { household_size: 1, annual_household_income: 10000 });
 if (!f.content[1].text.includes("/agents/assistance/") || f.content[1].text.includes("/info/")) throw new Error("funnel link wrong");
+
+// compare_bill_amount: mock the price API; no identifiers go in, link carries no amount
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (url, init) => String(url).includes("/v1/estimate/procedure")
+  ? new Response(JSON.stringify({ procedure: "Colonoscopy", estimated_total_allowed_amount: { low: 800, median: 1800, high: 4500 }, data_vintage: "2026-Q1" }), { status: 200 })
+  : realFetch(url, init);
+const cmp = async (amount, amount_type) => call("/p/oop-calculator/mcp", "compare_bill_amount", { procedure: "colonoscopy", state: "TX", amount, amount_type });
+const hi = await cmp(9000, "billed");
+const hiData = JSON.parse(hi.content[0].text);
+if (hiData.position_vs_typical_range !== "above" || hiData.times_typical_median !== 5) throw new Error("compare above wrong: " + hi.content[0].text);
+if (!hiData.notes[0].includes("not an error") && !hiData.notes[0].includes("common")) throw new Error("billed-above note must not call it an error");
+if (JSON.parse((await cmp(2000, "allowed")).content[0].text).position_vs_typical_range !== "within") throw new Error("compare within wrong");
+if (JSON.parse((await cmp(300, "allowed")).content[0].text).position_vs_typical_range !== "below") throw new Error("compare below wrong");
+if (hi.content[1].text.includes("9000")) throw new Error("amount must never appear in the link");
+globalThis.fetch = realFetch;
 
 const unknown = await handler(ev("POST", "/other", {}));
 if (unknown.statusCode !== 404) throw new Error("expected 404");

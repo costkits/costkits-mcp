@@ -337,6 +337,65 @@ export function createServer({ apiBase = "https://api.costkits.com", apiKey = nu
   );
 
 
+  // Bill sanity check: compares ONE dollar amount from a bill to the typical range for the procedure and
+  // state. Takes no names, dates, account numbers or other identifiers; the amount is not stored or logged.
+  reg(
+    "compare_bill_amount",
+    {
+      description:
+        "Compares one dollar amount from a medical bill or explanation of benefits with the typical allowed-amount range (low, median, high) for the same procedure in the same US state, and says whether it is below, within or above that range, with questions worth asking the billing office. Pass amount_type 'billed' for the charge on the bill or 'allowed' for the insurer's allowed amount. Billed charges are usually higher than allowed amounts, so a high billed charge alone is not an error. Needs only the procedure, state and amount; do not send names, dates, account or member numbers.",
+      inputSchema: {
+        procedure: z.string().describe("Procedure slug or plain name, e.g. 'colonoscopy'. Resolve plain names with resolve_procedure."),
+        state: z.string().length(2).describe("2-letter US state code, e.g. 'TX'"),
+        amount: z.number().min(0).max(10000000).describe("The dollar amount from the bill or EOB"),
+        amount_type: z.enum(["billed", "allowed"]).describe("'billed' = the charge on the bill; 'allowed' = the amount the insurer allowed"),
+      },
+    },
+    async ({ procedure, state, amount, amount_type }) => {
+      const res = await callApi("POST", "/v1/estimate/procedure", { body: { procedure: { type: procedure }, location: { state } } });
+      if (res.isError) return res;
+      let est;
+      try { est = JSON.parse(res.content[0].text); } catch { return { isError: true, content: [{ type: "text", text: "Could not read the price range for that procedure. Try resolve_procedure to confirm the name." }] }; }
+      const r = est.estimated_total_allowed_amount;
+      if (!r || !(r.median > 0)) return { isError: true, content: [{ type: "text", text: "No typical price range is available for that procedure and state." }] };
+
+      const position = amount < r.low ? "below" : amount > r.high ? "above" : "within";
+      const notes = [];
+      if (amount_type === "allowed") {
+        notes.push(position === "within"
+          ? "The allowed amount is inside the typical range for this procedure in this state."
+          : position === "below"
+            ? "The allowed amount is below the typical range. That can happen with deeply discounted or Medicare-based rates, or when the amount covers only part of the care."
+            : "The allowed amount is above the typical range. Ask the billing office what it includes, since bundled facility, physician, anesthesia and pathology charges can be added together.");
+      } else {
+        notes.push(position === "within"
+          ? "The billed charge is inside the typical allowed-amount range."
+          : position === "below"
+            ? "The billed charge is below the typical allowed-amount range, which suggests it may cover only part of the care."
+            : "The billed charge is above the typical allowed-amount range. This is common: billed charges are list prices and insurers usually allow less. What you owe depends on your plan's allowed amount, not the billed charge.");
+      }
+      const payload = {
+        procedure: est.procedure ?? procedure,
+        state: state.toUpperCase(),
+        amount_checked: amount,
+        amount_type,
+        typical_allowed_range: { low: r.low, median: r.median, high: r.high },
+        position_vs_typical_range: position,
+        times_typical_median: Math.round((amount / r.median) * 100) / 100,
+        data_vintage: est.data_vintage,
+        notes,
+        questions_to_ask: [
+          "Can I have an itemized bill with a code and amount for every line?",
+          "Which charges are the facility fee, the physician fee, anesthesia and pathology?",
+          "What did my insurer allow, and what does my explanation of benefits show I owe?",
+          "Is any line a duplicate, or billed more times than the service was performed?",
+        ],
+        disclaimer: "General information from typical prices, not a finding that a bill is wrong and not legal, medical or financial advice. Your plan, network and the facility change what is correct.",
+      };
+      return { content: [{ type: "text", text: JSON.stringify(payload) }] };
+    }
+  );
+
   reg(
     "check_financial_assistance",
     {

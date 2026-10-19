@@ -16,6 +16,7 @@ const TOOL_INTENT = {
   get_procedure_details: "cost",
   get_coverage: "cost",
   calculate_liability: "oop",
+  compare_bill_amount: "cost",
   check_financial_assistance: "assistance",
 };
 

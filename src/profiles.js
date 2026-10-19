@@ -22,7 +22,7 @@ export const PROFILES = {
   "oop-calculator": {
     mode: "info",
     basicEstimate: true,  // plan figures go through calculate_liability only, same minimization as cost-finder
-    tools: ["resolve_procedure", "estimate_procedure_cost", "calculate_liability"],
+    tools: ["resolve_procedure", "estimate_procedure_cost", "calculate_liability", "compare_bill_amount"],
   },
   "assistance-checker": {
     mode: "info",
