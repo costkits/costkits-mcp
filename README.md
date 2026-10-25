@@ -9,7 +9,7 @@ CostKits provides procedure cost estimates, patient out-of-pocket calculations, 
 [![npm](https://img.shields.io/npm/v/@costkits/costkits-mcp)](https://www.npmjs.com/package/@costkits/costkits-mcp)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-compatible-1E40AF)](https://modelcontextprotocol.io)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-listed-1E40AF)](https://registry.modelcontextprotocol.io/?search=costkits)
-[![smithery badge](https://smithery.ai/badge/@costkits/costkits-mcp)](https://smithery.ai/servers/costkits/costkits-mcp)
+[![LightNow capabilities](https://lightnow.ai/badge/io.github.costkits/costkits-mcp)](https://lightnow.ai/servers/io.github.costkits/costkits-mcp)
 [![Glama](https://glama.ai/mcp/servers/nui5hkst51/badge)](https://glama.ai/mcp/servers/nui5hkst51)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
